@@ -1,0 +1,77 @@
+---
+title: "response time"
+author: "Ian Riaf"
+date: "June 7, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(leaflet)
+library(htmltools)
+library(rgdal)
+library(Rmisc)
+
+## read data in R
+boston311 <- read.csv("311graffiti.csv")
+
+## convert character to POSIX
+boston311$open_dt <- as.POSIXlt(boston311$open_dt,format="%m/%d/%Y %H:%M",tz=Sys.timezone())
+
+boston311$target_dt <- as.POSIXlt(boston311$target_dt,format="%m/%d/%Y %H:%M",tz=Sys.timezone())
+
+boston311$closed_dt <- as.POSIXlt(boston311$closed_dt,format="%m/%d/%Y %H:%M",tz=Sys.timezone())
+
+
+## calculate response time 
+boston311$diffopentarget <- difftime(boston311$target_dt,boston311$open_dt,units = "days")
+
+boston311$diffopenclosed <- difftime(boston311$closed_dt,boston311$open_dt,units = "days")
+
+summary2 <- summarySE(na.omit(boston311), measurevar="diffopenclosed", groupvars="neighborhood")
+
+## DIFF
+
+ggplot(summary2, aes(x=reorder(neighborhood,-diffopenclosed), y=diffopenclosed, fill=reorder(neighborhood,-diffopenclosed))) + 
+  geom_bar(position=position_dodge(), stat="identity") +
+  ylab("Days")+
+  xlab("Neighborhood")+
+  theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black")) + guides(fill=FALSE)+
+  theme(axis.text.x=element_text(angle=20,hjust=1)) +
+  geom_text(aes(label=round(diffopenclosed,digit=0),vjust=-0.5)) +
+  ggtitle("Response time")
+
+##NUM
+
+ggplot(summary2, aes(x=reorder(neighborhood,-diffopenclosed), y=N, fill=reorder(neighborhood,-diffopenclosed))) + 
+  geom_bar(position=position_dodge(), stat="identity") +
+  ylab("counts")+
+  xlab("Neighborhood")+
+  theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black")) + guides(fill=FALSE)+
+  theme(axis.text.x=element_text(angle=20,hjust=1)) +
+  geom_text(aes(label=round(N,digit=0),vjust=-0.5)) +
+  ggtitle("Number of cases")
+  
+
+## SCATTERPLOT
+
+ggplot(summary2,aes(x=diffopenclosed,y=N,colour=neighborhood))+
+  geom_point(size=1)+
+  geom_text(aes(label=neighborhood), size=5)+
+  theme_linedraw()+
+  xlab("Response time")+
+  ylab("Number of case")+
+  labs(title="average response time & number of cases")+
+  theme(plot.title = element_text(hjust = 0.5,size = 10, face ="bold"),
+        axis.title=element_text(size=10,face="bold"),legend.position="none")
+```

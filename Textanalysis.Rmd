@@ -1,0 +1,78 @@
+---
+title: "Text analysis"
+author: "Dongyuan Zhou"
+date: "June 7, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(tidytext)
+library(tidyverse)
+library(twitteR)
+library(stringr)
+library(wordcloud)
+library(reshape2)
+library(ggplot2)
+library(maptools)
+library(sp)
+library(tm)
+library(NLP)
+library(devtools)
+library(streamR)
+library(RCurl)
+library(dplyr)
+library(ROAuth)
+library(graphTweets)
+library(igraph)
+library(readr)
+library(rgdal)
+library(SnowballC)
+```
+
+```{r}
+##### word cloud for Graffiti
+graffiti.word <- read.csv("graffiti_word.csv")[,-1]
+graffiti.word.freq <- graffiti.word %>%
+  count(word,sort=T)
+
+## WORD CLOUD
+
+graffiti.word.freq %>% with(wordcloud(word, n, max.words = 100,colors=brewer.pal(n=8, "Dark2"),random.order=FALSE,rot.per=0.35))
+
+## Sentiment Analysis
+nrcjoy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+graffiti_text_sentiment_stat <-  graffiti.word%>%
+  inner_join(nrcjoy) %>%
+  count(word, sort = T)
+
+bing_word_counts <- graffiti.word %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup() %>%
+  filter(sentiment=="positive")
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+
+graffiti.word %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("#F8766D", "#00BFC4"),
+                   max.words = 40,title.size=3)
+```
